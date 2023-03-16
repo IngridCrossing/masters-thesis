@@ -1,82 +1,102 @@
 model{ #("JAGS_Marginalized_Time.jags")
-   phi.alpha ~ dnorm(6, 1) #Intercept for daily survival as a function of year
-   phi.beta ~ dnorm(0, ((1/2.71)^2))  #Additional survival probability when infected
+  
+	phi.alpha ~ dnorm(6, 1) #intercept for daily survival as a function of year.
+	phi.beta ~ dnorm(0, ((1/2.71)^2)) #slope for beta (added to alpha to produce phi.I.c)
+		
+  	p.I ~ dunif(0,1) #prob of detection when infected (Alive)
+	p.S ~ dunif(0,1) #prob of detection when uninfected/susceptible (Alive)
 	
-  p.I.c ~ dunif(0,1) #prob of detection when infected (Alive)
-	p.S.c ~ dunif(0,1) #prob of detection when uninfected/susceptible (Alive)
-
-	p.I.D.c ~ dunif(0,1) #prob of detection when dead and infected
-	p.S.D.c ~ dunif(0,1) #prob of detection when dead and uninfected
+	p.I.D <- 0 #prob of detection when dead and infected
+	p.S.D <- 0 #prob of detection when dead and uninfected
+	
 	b.I.c ~ dunif(0,1) #prob of becoming infected, given you are susceptible
 	b.S.c ~ dunif(0,1) #prob of recovering from an infection/ probability of becoming susceptible, given infected
+	
+	
+ 	logit(phi.S.c) <- phi.alpha[k] #daily prob survival for uninfected/susceptible individuals
+    	logit(phi.I.c) <- phi.alpha[k] + phi.beta[k] #daily prob survival for infected individuals
 
-	logit(phi.I.c) <- phi.alpha + phi.beta  #Survival for infected individuals
-  logit(phi.S.c) <- phi.alpha #Survival for uninfected/susceptible individuals
-  
-  
-    for(t in 1:Nint){  #Nint is the number of sampling intervals
-  phi.I[t] <- phi.I.c^intervalLength[t] #prob of surv when infected
+
+  for(t in 1:Nint){  #Nint is the number of sampling intervals  
+
 	phi.S[t] <- phi.S.c^intervalLength[t] #prob of surv when uninfected/susceptible
+ 	phi.I[t] <- phi.I.c^intervalLength[t] #prob of surv when infected
 	
-  p.I[t] <- p.I.c ##prob of detection when infected (Alive)
-	p.S[t] <- p.S.c ##prob of detection when uninfected/susceptible (Alive)
-	
-	p.I.D[t] <- p.I.D.c  #prob of detection when dead and infected
-	p.S.D[t] <- p.S.D.c  #prob of detection when dead and uninfected
 	b.I[t] <- 1-(1-b.I.c)^intervalLength[t]  #prob of becoming infected
 	b.S[t] <- 1-(1-b.S.c)^intervalLength[t]  #prob of recovering from an infection/ probability of becoming susceptible
 	
 	# states in ecological process
-    omega[1,1,t] <- phi.S[t] * (1-b.I[t])
+    	omega[1,1,t] <- phi.S[t] * (1-b.I[t])
 	omega[1,2,t] <- phi.S[t] *b.I[t]
 	omega[1,3,t] <- (1-phi.S[t]) * (1-b.I[t])
 	omega[1,4,t] <- (1-phi.S[t]) * b.I[t]
+	omega[1,5,t] <- 0
 	omega[2,1,t] <- phi.I[t]*b.S[t]
 	omega[2,2,t] <- phi.I[t]*(1-b.S[t])
 	omega[2,3,t] <- (1-phi.I[t])*b.S[t]
 	omega[2,4,t] <- (1-phi.I[t]) *(1-b.S[t])
+	omega[2,5,t] <- 0
 	omega[3,1,t] <- 0
 	omega[3,2,t] <- 0
-	omega[3,3,t] <- 1
+	omega[3,3,t] <- 0
 	omega[3,4,t] <- 0
+	omega[3,5,t] <- 1 #once dead they degrade quickly or are removed 
 	omega[4,1,t] <- 0
 	omega[4,2,t] <- 0
 	omega[4,3,t] <- 0
-	omega[4,4,t] <- 1
-	# states in observation process
-    rho[1,1,t] <- p.S[t]
-	rho[1,2,t] <- 0
-	rho[1,3,t] <- 0
-	rho[1,4,t] <- 0
-	rho[1,5,t] <- (1-p.S[t])
-	rho[2,1,t] <- 0
-	rho[2,2,t] <- p.I[t]
-	rho[2,3,t] <- 0
-	rho[2,4,t] <- 0
-	rho[2,5,t] <- (1-p.I[t])
-	rho[3,1,t] <- 0
-	rho[3,2,t] <- 0
-	rho[3,3,t] <- p.S.D[t]
-	rho[3,4,t] <- 0
-	rho[3,5,t] <- (1-p.S.D[t])
-	rho[4,1,t] <- 0
-	rho[4,2,t] <- 0
-	rho[4,3,t] <- 0
-	rho[4,4,t] <- p.I.D[t]
-	rho[4,5,t] <- (1-p.I.D[t])
-    }
-    for(i in 1:NCH){
-    zeta[i,sumf[i],1] <- 1 #value when an uninfected individual is alive
-    zeta[i,sumf[i],2] <- 1 #value when an infected/susceptible individual is alive
-	zeta[i,sumf[i],3] <- 0 #value when an uninfected individual is dead
-	zeta[i,sumf[i],4] <- 0 #value when an infected/susceptible individual is dead
-    for(t in sumf[i]:(Nint)){
-    zeta[i,(t+1),1] <- inprod(zeta[i,t,], omega[,1,t]) * rho[1,State.index[i,(t+1)],t]
-    zeta[i,(t+1),2] <- inprod(zeta[i,t,], omega[,2,t]) * rho[2,State.index[i,(t+1)],t]
-	zeta[i,(t+1),3] <- inprod(zeta[i,t,], omega[,3,t]) * rho[3,State.index[i,(t+1)],t]
-	zeta[i,(t+1),4] <- inprod(zeta[i,t,], omega[,4,t]) * rho[4,State.index[i,(t+1)],t]
+	omega[4,4,t] <- 0
+        omega[4,5,t] <- 1 #once dead they degrade quickly or are removed 
+	omega[5,1,t] <- 0
+	omega[5,2,t] <- 0
+	omega[5,3,t] <- 0
+	omega[5,4,t] <- 0
+	omega[5,5,t] <- 1 #once dead or removed they stay dead or removed 
+
+	}
+
+	# states in observation process (note:useful to think about the rho matrix in terms rho[“true state”, “observed state”])
+  	rho[1,1] <- p.S
+	rho[1,2] <- 0
+	rho[1,3] <- 0
+	rho[1,4] <- 0
+	rho[1,5] <- (1-p.S)
+	rho[2,1] <- 0
+	rho[2,2] <- p.I
+	rho[2,3] <- 0
+	rho[2,4] <- 0
+	rho[2,5] <- (1-p.I)
+	rho[3,1] <- 0
+	rho[3,2] <- 0
+	rho[3,3] <- p.S.D
+	rho[3,4] <- 0
+	rho[3,5] <- (1-p.S.D)
+	rho[4,1] <- 0
+	rho[4,2] <- 0
+	rho[4,3] <- 0
+	rho[4,4] <- p.I.D
+	rho[4,5] <- (1-p.I.D)
+	rho[5,1] <- 0
+	rho[5,2] <- 0
+	rho[5,3] <- 0
+	rho[5,4] <- 0
+	rho[5,5] <- 1 #probability of being known as dead when a carcase was previously discovered and has been removed from a site.
+	
+    for(i in 1:NCH){ #BASED ON THE FIRST TIME AN INDIVIDUAL IS SEEN IN AN ALLOWABLE STARTING STATE CREATE A VECTOR WITH 1 FOR THE ALLOWABLE STATE IT WAS FIRST SEEN IN AND ZERO FOR ALL OTHER STATES. 
+    	zeta[i,sumf[i],1] <- equals(State.index[i,sumf[i]],1) #initial state when an uninfected individual is alive
+    	zeta[i,sumf[i],2] <- equals(State.index[i,sumf[i]],2) #initial state when an infected/susceptible individual is alive
+	zeta[i,sumf[i],3] <- 0 #initial state when an uninfected individual is dead #change to zeta[i,sumf[i],3] <- equals(State.index[i,sumf[i]],3) if animals dont always degrade within an interval 
+	zeta[i,sumf[i],4] <- 0 #initial state when infected/susceptible individual is dead #change to zeta[i,sumf[i],4] <- equals(State.index[i,sumf[i]],4) if animals dont always degrade within an interval 
+	zeta[i,sumf[i],5] <- 0 #initial state when dead and degraded #INDIVIDUALS ARE NEVER FIRST SEEN IN A REMOVED STATE
+
+    for(t in sumf[i]:(suml[i])){
+    	zeta[i,(t+1),1] <- inprod(zeta[i,t,], omega[,1,t]) * rho[1,State.index[i,(t+1)]]
+    	zeta[i,(t+1),2] <- inprod(zeta[i,t,], omega[,2,t]) * rho[2,State.index[i,(t+1)]]
+	zeta[i,(t+1),3] <- inprod(zeta[i,t,], omega[,3,t]) * rho[3,State.index[i,(t+1)]]
+	zeta[i,(t+1),4] <- inprod(zeta[i,t,], omega[,4,t]) * rho[4,State.index[i,(t+1)]]
+	zeta[i,(t+1),5] <- inprod(zeta[i,t,], omega[,5,t]) * rho[5,State.index[i,(t+1)]]
     }
     lik[i] <- sum(zeta[i,(Nint+1),])
     ones[i] ~ dbin(lik[i], FR[i])
-    }
+    }  
+
     }
