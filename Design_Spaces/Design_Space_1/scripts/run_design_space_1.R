@@ -1,12 +1,15 @@
+.libPaths("../R/lib")
+
+all_packages <- c("readxl", "tidyr", "rjags", "dplyr", "jagsUI", "magrittr", "ggplot2")
+lapply(all_packages, require, character.only = TRUE) 
+
+#command_args <- commandArgs(trailingOnly = TRUE) #Takes arguments for the .slurm submission files for parallel processing in Spartan
 
 
-command_args <- commandArgs(trailingOnly = TRUE) #Takes arguments for the .slurm submission files for parallel processing in Spartan
 
-
-
-design_index <- as.numeric(command_args[1]) #Index for survey design for this iteration
-detProb_index <- as.numeric(command_args[2]) #Index for detection probability for this iteration
-path_index <- as.numeric(command_args[1]) #Index for path to save outputs for this iteration
+#design_index <- as.numeric(command_args[1]) #Index for survey design for this iteration
+#detProb_index <- as.numeric(command_args[2]) #Index for detection probability for this iteration
+#path_index <- as.numeric(command_args[1]) #Index for path to save outputs for this iteration
 
 design_index <- 2
 detProb_index <- 2
