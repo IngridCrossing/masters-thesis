@@ -292,6 +292,10 @@ get.first <- function(x) min(which(x != 5)) #find the first value that is not 5 
 
 
 
+# Function to create vector of suml
+
+find.suml <- function(x){which(x !=0) %>%
+max()}
 
 
 ##--------------- csv naming function-------------------#

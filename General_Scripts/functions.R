@@ -138,6 +138,11 @@ loop.recaptures.inf = function(n = 100, #number of initial individuals
   # intervalLength <- diff(survey.days)
   # intervalLength <- rep(intervalLength, survey.years) 
 #---------------------------------------------#
+
+suml <- apply(CH_SI_data.df, 1, find.suml)
+
+
+#----------------------------------------------#
   
   intervalLength <- diff(survey.days)
   
@@ -145,7 +150,7 @@ loop.recaptures.inf = function(n = 100, #number of initial individuals
   
   jagsM.data <- list(NCH = NCH, Nint = Nint, State.index = State.index,
                      sumf = sumf, FR = FR, ones = ones, 
-                     intervalLength = intervalLength)
+                     intervalLength = intervalLength, suml = suml)
   
   
   #----identify the parameters to monitor-------------------
